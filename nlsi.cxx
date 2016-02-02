@@ -12,6 +12,34 @@ void init( cmplx* const psi0, const double eta, const double sigma, const double
 
 void writeToFile(const cmplx* const v, const string s, const double dx,
                  const int Nx, const double xmin);
+
+void diff(cmplx* const f1, cmplx* const f0,
+          const double dt, const double dx, const int N)
+{
+
+  cmplx* d=new cmplx[N];
+
+  cmplx u = cmplx(0, dt/(dx*dx)); // u=-alpha
+  for(int i=0;i<N;i++) d[i] = 1.0 - 2.0*u;
+  
+  for(int i=1;i<N;i++) {
+    d[i] -= u / d[i-1] * u;
+    f0[i] -= u / d[i-1] * f0[i-1];
+  }
+  
+  f1[N-1] = f0[N-1] / d[N-1];
+  for(int i=N-2;i>=0;i--) f1[i] = ( f0[i] - u * f1[i+1] ) / d[i];
+
+  delete[] d;
+}
+void abs2(cmplx* const f1, cmplx* const f0,
+          const double dt, const int N)
+{
+  for (int i=0; i<N; i++) {
+    cmplx arg = cmplx(0, -norm(f0[i])*dt);
+    f1[i] = f0[i] * exp(arg);
+  }
+}
 //-----------------------------------
 int main(){
 
@@ -29,6 +57,8 @@ int main(){
 	stringstream strm;
 
 	cmplx* psi0 = new cmplx[Nx];
+	cmplx* psi1 = new cmplx[Nx];
+	cmplx* h;
 
 	init(psi0, eta, dx, dt,Nx);
 
@@ -38,6 +68,13 @@ int main(){
 	for (int i = 1; i <= Na; i++) {
 
 		for (int j = 1; j <= Nk-1; j++) {
+		  
+		  diff(psi1, psi0, dt, dx, Nx);
+		  abs2(psi1, psi1, dt, Nx);
+		  h = psi0;
+		  psi0 = psi1;
+		  psi1 = h;
+		  
 		}
 		strm.str("");
 		strm << "psi_" << i;
